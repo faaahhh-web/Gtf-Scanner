@@ -1,0 +1,38 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>GTF Scanner</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mut:#667085;--ln:#e4e7ec;--buy:#087443;--sell:#b42318;--acc:#1d4ed8}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#171b22;--tx:#e8ebf0;--mut:#8b94a3;--ln:#2a303b;--buy:#3ddc97;--sell:#ff7a70;--acc:#7aa2ff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,sans-serif;padding:12px 16px 40px}
+h1{font-size:18px;margin:4px 0}.sub{color:var(--mut);font-size:12px;margin-bottom:10px}
+.bar{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0}
+.bar button{border:1px solid var(--ln);background:var(--card);color:var(--tx);padding:7px 11px;border-radius:999px;font-size:13px}
+.bar button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.c{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:12px;margin:10px 0}
+.t{display:flex;justify-content:space-between;align-items:baseline}.sym{font-weight:700;font-size:16px}
+.buy{color:var(--buy);font-weight:700}.sell{color:var(--sell);font-weight:700}
+.tag{font-size:11px;border:1px solid var(--ln);border-radius:6px;padding:1px 6px;color:var(--mut);margin-left:4px}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.g div{font-size:11px;color:var(--mut)}.g b{display:block;color:var(--tx);font-size:14px}
+.m{font-size:12px;color:var(--mut)}.empty{color:var(--mut);text-align:center;padding:30px 0}
+</style></head><body>
+<h1>GTF Scanner · F&amp;O</h1><div class="sub" id="meta">loading…</div>
+<div class="bar" id="fm"></div><div class="bar" id="fs"></div><div class="bar" id="fx"></div>
+<div id="list"></div>
+<script>
+const F={mode:'all',side:'all',st:'all'};let D=null;
+const L={all:'All',daily:'Daily',monthly:'Monthly',quarterly:'Quarterly',BUY:'Buy',SELL:'Sell',SET_LIMIT:'Type 1',TYPE2_TRIGGER:'Type 2',TYPE3_CONFIRMED:'Type 3',WATCH:'Watch'};
+function bar(id,key,opts){const e=document.getElementById(id);e.innerHTML='';opts.forEach(o=>{const b=document.createElement('button');b.textContent=L[o];b.className=F[key]==o?'on':'';b.onclick=()=>{F[key]=o;draw()};e.appendChild(b)})}
+function draw(){
+  bar('fm','mode',['all','daily','monthly','quarterly']);bar('fs','side',['all','BUY','SELL']);
+  bar('fx','st',['all','SET_LIMIT','TYPE2_TRIGGER','TYPE3_CONFIRMED','WATCH']);
+  const el=document.getElementById('list');if(!D){return}
+  const r=D.signals.filter(s=>(F.mode=='all'||s.mode==F.mode)&&(F.side=='all'||s.plan.side==F.side)&&(F.st=='all'||s.status==F.st));
+  el.innerHTML=r.length?r.map(s=>{const p=s.plan,q=s.parts;return `<div class="c"><div class="t"><span><span class="sym">${s.symbol}</span> <span class="${p.side=='BUY'?'buy':'sell'}">${p.side}</span><span class="tag">${L[s.mode]}</span><span class="tag">${L[s.status]}</span></span><b>${s.score}</b></div>
+  <div class="g"><div>Entry<b>${p.entry}</b></div><div>Stop<b>${p.sl}</b></div><div>Target 2:1<b>${p.target}</b></div><div>Qty<b>${s.lots?s.lots*s.lot:'—'}</b></div></div>
+  <div class="m">Zone ${s.zone[0]}–${s.zone[1]} ${s.pattern}${s.lotl?' LOTL':''} · tested ${s.tests}× · CMP ${s.cmp}<br>Fresh ${q.fresh} · Strength ${q.strength} · Base ${q.base} · EMA ${q.ema}<br>Curve ${s.loc.replace('_',' ').toLowerCase()} · trend ${s.itf_trend.toLowerCase()}${s.lots?'':' · risk too small for 1 lot'}</div></div>`}).join(''):'<div class="empty">No setups right now</div>';
+}
+fetch('results.json?'+Date.now()).then(r=>r.json()).then(d=>{D=d;
+ document.getElementById('meta').textContent=`Updated ${d.updated} · ${d.scanned} scanned · ${d.signals.length} setups · capital ₹${d.capital.toLocaleString('en-IN')} @ ${d.risk_pct}% risk`+(d.errors.length?` · ${d.errors.length} skipped`:'');draw()})
+ .catch(()=>{document.getElementById('meta').textContent='No results yet. Run the GTF scan workflow once.'});
+draw();
+</script></body></html>
