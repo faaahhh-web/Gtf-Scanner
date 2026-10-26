@@ -1,0 +1,32 @@
+name: GTF scan
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "*/30 3-10 * * 1-5"
+permissions:
+  contents: write
+concurrency: gtf-scan
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - run: python scan.py
+        env:
+          ANGEL_API_KEY: ${{ secrets.ANGEL_API_KEY }}
+          ANGEL_CLIENT_ID: ${{ secrets.ANGEL_CLIENT_ID }}
+          ANGEL_PIN: ${{ secrets.ANGEL_PIN }}
+          ANGEL_TOTP_SECRET: ${{ secrets.ANGEL_TOTP_SECRET }}
+          CAPITAL: ${{ vars.CAPITAL || '100000' }}
+          RISK_PCT: ${{ vars.RISK_PCT || '1.0' }}
+      - name: Publish results
+        run: |
+          git config user.name "gtf-bot"
+          git config user.email "gtf-bot@users.noreply.github.com"
+          git add results.json
+          git diff --cached --quiet || (git commit -m "scan" && git push)
