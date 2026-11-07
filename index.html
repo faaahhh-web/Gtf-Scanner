@@ -1,0 +1,127 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>GTF Scanner</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--tx:#14181f;--mut:#667085;--ln:#e4e7ec;--buy:#087443;--sell:#b42318;--acc:#1d4ed8}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1116;--card:#171b22;--tx:#e8ebf0;--mut:#8b94a3;--ln:#2a303b;--buy:#3ddc97;--sell:#ff7a70;--acc:#7aa2ff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 system-ui,sans-serif;padding:12px 16px 40px}
+h1{font-size:18px;margin:4px 0}.sub{color:var(--mut);font-size:12px;margin-bottom:10px}
+.lab{font-size:11px;color:var(--mut);margin:8px 0 2px;text-transform:uppercase;letter-spacing:.04em}
+.bar{display:flex;gap:6px;flex-wrap:wrap}
+.bar button{border:1px solid var(--ln);background:var(--card);color:var(--tx);padding:7px 11px;border-radius:999px;font-size:13px}
+.bar button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.cnt{margin:12px 0 4px;font-weight:600}
+.c{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:12px;margin:10px 0}
+.t{display:flex;justify-content:space-between;align-items:baseline}.sym{font-weight:700;font-size:16px}
+.buy{color:var(--buy);font-weight:700}.sell{color:var(--sell);font-weight:700}
+.tag{font-size:11px;border:1px solid var(--ln);border-radius:6px;padding:1px 6px;color:var(--mut);margin-left:4px;white-space:nowrap}
+.tag.hot{color:var(--acc);border-color:var(--acc)}
+.g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0}.g div{font-size:11px;color:var(--mut)}.g b{display:block;color:var(--tx);font-size:14px}
+.m{font-size:12px;color:var(--mut)}.empty{color:var(--mut);text-align:center;padding:30px 0}
+.pill{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--ln);background:var(--card);color:var(--tx);border-radius:999px;padding:6px 11px;margin:3px 4px 3px 0;font-size:13px;font-weight:600}
+.pill.new{border-color:#d98e04;background:rgba(217,142,4,.1)}.pill i{font-style:normal;font-size:10px;font-weight:700;background:#e69b0a;color:#fff;border-radius:999px;padding:1px 6px}
+.seg{display:flex;background:var(--bg);border:1px solid var(--ln);border-radius:12px;padding:4px;gap:4px}.seg button{flex:1;border:0;background:none;color:var(--tx);padding:10px;border-radius:9px;font-size:14px;font-weight:600}.seg button.on{background:var(--acc);color:#fff}
+.grp{border:1px solid var(--ln);border-radius:14px;padding:12px;margin:12px 0;background:var(--card)}.grp.D{border-color:var(--buy)}.grp.S{border-color:var(--sell)}.grp h3{margin:0 0 2px;font-size:16px}
+.bk{border:1px solid var(--ln);border-radius:10px;padding:10px;margin:8px 0;background:var(--bg)}.bk .bl{font-size:11px;letter-spacing:.06em;color:var(--mut)}.bk .bn{font-size:15px;margin:2px 0 6px}
+.stats{display:flex;gap:8px;overflow-x:auto;margin:10px 0}.stat{min-width:120px;flex:1;border:1px solid var(--ln);border-radius:12px;padding:10px;background:var(--card)}.stat span{font-size:12px;color:var(--mut)}.stat b{display:block;font-size:24px}
+.card2{border:1px solid var(--ln);border-radius:14px;padding:12px;margin:10px 0;background:var(--card)}.card2 h2{font-size:16px;margin:0 0 4px}.chip{display:inline-block;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:700;margin:3px 6px 3px 0}
+.chip.a{background:rgba(8,116,67,.14);color:var(--buy)}.chip.r{background:rgba(180,35,24,.14);color:var(--sell)}.chip.n{background:rgba(29,78,216,.14);color:var(--acc)}
+select{width:100%;padding:11px;border-radius:10px;border:1px solid var(--ln);background:var(--card);color:var(--tx);font-size:15px}
+#sheet{position:fixed;left:0;right:0;bottom:0;max-height:75vh;overflow:auto;background:var(--card);border-top:1px solid var(--ln);border-radius:16px 16px 0 0;padding:14px 16px 28px;box-shadow:0 -8px 30px rgba(0,0,0,.25);display:none;z-index:9}
+#sheet .x{float:right;border:1px solid var(--ln);background:none;color:var(--tx);border-radius:999px;padding:4px 12px}
+.row{border-top:1px solid var(--ln);padding:8px 0;font-size:13px}.row b{font-size:14px}
+</style></head><body>
+<h1>GTF Scanner · F&amp;O</h1><div class="sub" id="meta">loading…</div>
+<div class="lab">View</div><div class="bar" id="fv"></div>
+<div id="zf"><div class="lab">Quality (min trade score)</div><div class="bar" id="fq"></div>
+<div class="lab">Mode</div><div class="bar" id="fm"></div>
+<div class="lab">Side</div><div class="bar" id="fs"></div>
+<div class="lab">Show</div><div class="bar" id="fx"></div></div>
+<div id="bf"><div class="lab">Side</div><div class="bar" id="bs"></div></div>
+<div id="bd"></div><div class="cnt" id="cnt"></div><div id="list"></div>
+<script>
+const F={view:'board',bd:{side:'demand',date:null},bside:'all',q:7,mode:'all',side:'all',show:'act'};let D=null;
+const NAME={all:'All',daily:'Daily',weekly:'Weekly',monthly:'Monthly',quarterly:'Quarterly',BUY:'Buy',SELL:'Sell',SET_LIMIT:'Type 1',TYPE2_TRIGGER:'Type 2',TYPE3_CONFIRMED:'Type 3',WATCH:'Watch'};
+const QOPT=[[7,'7+ Quality'],[6,'6+'],[5,'5+ All']];
+const SOPT=[['act','Entry ready'],['near','+ Near (≤1.5%)'],['all','Everything']];
+function bar(id,opts,cur,fn){const e=document.getElementById(id);e.innerHTML='';opts.forEach(([v,l])=>{const b=document.createElement('button');b.textContent=l;b.className=(cur==v)?'on':'';b.onclick=()=>{fn(v);draw()};e.appendChild(b)})}
+const TF={daily:'15m',weekly:'75m',monthly:'1D',quarterly:'1W'};
+const ft=t=>{try{return new Date(String(t).replace(' ','T')).toLocaleString('en-IN',{timeZone:'Asia/Kolkata',day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit',hour12:false})}catch(e){return String(t).slice(0,16)}};
+const dist=s=>Math.abs(s.cmp-s.plan.entry)/s.cmp*100;
+function pick(){
+  let r=D.signals.filter(s=>s.score>=F.q&&(F.mode=='all'||s.mode==F.mode)&&(F.side=='all'||s.plan.side==F.side));
+  if(F.show=='act')r=r.filter(s=>s.status!='WATCH'||dist(s)<=0.5);       // triggered, or price already at the entry line
+  else if(F.show=='near')r=r.filter(s=>s.status!='WATCH'||dist(s)<=1.5);
+  // one zone per symbol+mode: best score, then closest to price
+  const best={};r.forEach(s=>{const k=s.symbol+'|'+s.mode;const b=best[k];if(!b||s.score>b.score||(s.score==b.score&&dist(s)<dist(b)))best[k]=s});
+  r=Object.values(best);
+  // confluence: same symbol + same side in more than one mode
+  const cf={};r.forEach(s=>{const k=s.symbol+'|'+s.plan.side;cf[k]=(cf[k]||0)+1});
+  r.forEach(s=>s.cf=cf[s.symbol+'|'+s.plan.side]);
+  const rank={TYPE3_CONFIRMED:0,TYPE2_TRIGGER:0,SET_LIMIT:1,WATCH:2};
+  r.sort((a,b)=>b.cf-a.cf||rank[a.status]-rank[b.status]||b.score-a.score||dist(a)-dist(b));
+  return r}
+
+let H={dates:{}};
+const BTF=[['1D','DAILY'],['1W','WEEKLY'],['1M','MONTHLY'],['1Q','QUARTERLY'],['6M','HALF YEARLY'],['1Y','YEARLY']];
+const TFL={'1D':'Daily','1W':'Weekly','1M':'Monthly','1Q':'Quarterly','6M':'Half-yearly','1Y':'Yearly'};
+function dayFromResults(){const b={},t={};(D.board||[]).forEach(r=>{const k=`${r.kind=='D'?'demand':'supply'}|${r.state}|%|${r.tf}`;(b[k.replace('%','standard')]=b[k.replace('%','standard')]||[]).push(r.symbol);if(r.signal)(b[k.replace('%','signal')]=b[k.replace('%','signal')]||[]).push(r.symbol)});
+ (D.trades||[]).forEach(x=>{const k=`${x.kind=='D'?'demand':'supply'}|${x.type}`;(t[k]=t[k]||[]).push(x.symbol)});return{b,t}}
+const symsOf=day=>{const s=new Set();Object.values((day&&day.b)||{}).forEach(a=>a.forEach(x=>s.add(x)));return s};
+function openSheet(sym,date,latest){const el=document.getElementById('sheet');let h=`<button class="x" onclick="document.getElementById('sheet').style.display='none'">Close</button><h2 style="margin:0 0 6px">${sym}</h2>`;
+ if(latest){const rows=(D.board||[]).filter(r=>r.symbol==sym).sort((a,b)=>BTF.findIndex(x=>x[0]==b.tf)-BTF.findIndex(x=>x[0]==a.tf));const tr=(D.trades||[]).filter(r=>r.symbol==sym);
+  tr.forEach(x=>{h+=`<div class="row"><b>${x.type} trade · ${x.kind=='D'?'BUY':'SELL'}</b> <span class="tag">${TFL[x.ltf]} zone inside ${TFL[x.htf]} zone</span><br>Entry ${x.plan.entry} · Stop ${x.plan.sl} · Target 2:1 ${x.plan.target}${x.lots?` · Qty ${x.lots*x.lot}`:' · risk too small for 1 lot'}<br><span class="m">${TFL[x.ltf]} zone ${x.ltf_zone[0]}–${x.ltf_zone[1]} (score ${x.score}) · ${TFL[x.htf]} zone ${x.htf_zone[0]}–${x.htf_zone[1]} (score ${x.htf_score}) · stop ${x.risk_pct}%</span></div>`});
+  rows.forEach(r=>{h+=`<div class="row"><b class="${r.kind=='D'?'buy':'sell'}">${r.kind=='D'?'DEMAND':'SUPPLY'}</b> · ${TFL[r.tf]} · ${r.state=='inzone'?'in zone / reacting':'approaching'}${r.signal?' · <b>signal</b>':''}<br>Zone ${r.zone[0]}–${r.zone[1]} ${r.pattern}${r.lotl?' LOTL':''} · score ${r.score} · tested ${r.tests}× · ${r.state=='inzone'?'CMP '+r.cmp:r.dist_pct+'% away (CMP '+r.cmp+')'}<br><span class="m">Entry ${r.plan.entry} · Stop ${r.plan.sl} · Target 2:1 ${r.plan.target} · stop ${r.risk_pct}% · Fresh ${r.parts.fresh} Strength ${r.parts.strength} Base ${r.parts.base}</span></div>`});
+  if(!rows.length)h+='<div class="m">No zone rows in the latest scan.</div>'}
+ else{const d=H.dates[date]||{b:{}};Object.entries(d.b).filter(([k,a])=>a.includes(sym)).forEach(([k])=>{const [sd,st,cl,tf]=k.split('|');h+=`<div class="row">${sd} · ${st=='inzone'?'in zone / reacting':'approaching'} · ${cl} · ${TFL[tf]}</div>`});h+='<div class="m" style="margin-top:8px">Price levels are kept for the latest scan only.</div>'}
+ el.innerHTML=h;el.style.display='block'}
+function pills(arr,prevArr,date,latest){return arr.map(x=>{const nw=prevArr&&!prevArr.includes(x);return `<button class="pill${nw?' new':''}" onclick="openSheet('${x}','${date}',${latest})">${x}${nw?'<i>NEW</i>':''}</button>`}).join('')}
+function drawBoard(){
+  const el=document.getElementById('bd');if(!D){el.innerHTML='';return}
+  const hd={...H.dates};if(D.date&&!hd[D.date])hd[D.date]=dayFromResults();H.dates=hd;
+  const dates=Object.keys(hd).sort();if(!dates.length){el.innerHTML='<div class="empty">No board data yet. Run the GTF scan workflow.</div>';return}
+  const last=dates[dates.length-1];const sel=(F.bd.date&&hd[F.bd.date])?F.bd.date:last;F.bd.date=sel;const i=dates.indexOf(sel);const prev=i>0?hd[dates[i-1]]:null;const day=hd[sel];const latest=sel==last;
+  const cur=symsOf(day),pv=prev?symsOf(prev):null;const added=pv?[...cur].filter(x=>!pv.has(x)).sort():[],removed=pv?[...pv].filter(x=>!cur.has(x)).sort():[];
+  const nb=Object.values(day.b||{}).filter(a=>a.length).length;
+  const freq={};dates.forEach(d=>symsOf(hd[d]).forEach(x=>freq[x]=(freq[x]||0)+1));const top=Object.entries(freq).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,30);
+  const age=Math.floor((Date.now()-new Date(last+'T00:00:00+05:30'))/864e5);
+  let h=`<div class="card2"><div class="m">GTF ZONE BOARD</div><h2>Zones across 1D · 1W · 1M · 1Q · 6M · 1Y</h2><div class="m">Showing ${sel} · Last scan ${D.updated}${age>3?` · latest data is ${age} days old`:''}</div>
+   <div class="lab">Trading day</div><select onchange="F.bd.date=this.value;draw()">${dates.slice().reverse().map(d=>`<option value="${d}"${d==sel?' selected':''}>${d}</option>`).join('')}</select></div>
+   <div class="stats"><div class="stat"><span>Unique symbols</span><b>${cur.size}</b></div><div class="stat"><span>Buckets filled</span><b>${nb}</b></div><div class="stat"><span>Days stored</span><b>${dates.length}</b></div></div>
+   <div class="card2"><h2>Day-over-day change</h2><div class="m">Compared with ${prev?dates[i-1]:'— (no earlier day yet)'}</div><span class="chip a">Added: ${added.length}</span><span class="chip r">Removed: ${removed.length}</span><span class="chip n">Net: ${added.length-removed.length>=0?'+':''}${added.length-removed.length}</span>
+   ${added.length?`<div class="lab">Added symbols</div>${added.map(x=>`<button class="pill new" onclick="openSheet('${x}','${sel}',${latest})">${x}<i>NEW</i></button>`).join('')}`:''}${removed.length?`<div class="lab">Removed symbols</div>${removed.map(x=>`<button class="pill" onclick="openSheet('${x}','${sel}',${latest})">${x}</button>`).join('')}`:''}</div>
+   <div class="card2"><h2>Most frequent symbols</h2><div class="m">Days present across stored days</div>${top.map(([x,n])=>`<button class="pill" onclick="openSheet('${x}','${sel}',${latest})">${x} ${n}d</button>`).join('')}</div>
+   <div class="card2"><h2>Zone view</h2><div class="seg" id="sg">${[['demand','Demand'],['supply','Supply'],['trades','Trades']].map(([v,l])=>`<button class="${F.bd.side==v?'on':''}" onclick="F.bd.side='${v}';draw()">${l}</button>`).join('')}</div></div>`;
+  if(F.bd.side=='trades'){['demand','supply'].forEach(sd=>{h+=`<div class="grp ${sd=='demand'?'D':'S'}"><h3>${sd} trades</h3>`;['MIT','YIT','QIT'].forEach(n=>{const a=(day.t||{})[`${sd}|${n}`]||[];const pa=prev&&(prev.t||{})[`${sd}|${n}`];h+=`<div class="bk"><div class="bl">BUCKET</div><div class="bn">${n} Trade (${a.length} count)</div>${a.length?pills(a,pa||(prev?[]:null),sel,latest):'<span class="m">—</span>'}</div>`});h+='</div>'})}
+  else{const sd=F.bd.side,cl2=sd=='demand'?'D':'S';[['approaching','standard'],['approaching','signal'],['inzone','standard'],['inzone','signal']].forEach(([st,cl])=>{const bks=BTF.map(([tf,nm])=>[tf,nm,(day.b||{})[`${sd}|${st}|${cl}|${tf}`]||[]]).filter(x=>x[2].length);if(!bks.length)return;
+    h+=`<div class="grp ${cl2}"><h3>${sd} • ${st=='inzone'?'in-zone/reacting':'approaching'} • ${cl}</h3><div class="m">Date: ${sel}</div>${bks.map(([tf,nm,a])=>{const pa=prev?((prev.b||{})[`${sd}|${st}|${cl}|${tf}`]||[]):null;return `<div class="bk"><div class="bl">BUCKET</div><div class="bn">${nm} (${a.length} count)</div>${pills(a,pa,sel,latest)}</div>`}).join('')}</div>`});
+    if(!h.includes('class="grp'))h+='<div class="empty">No zones in this view.</div>'}
+  el.innerHTML=h}
+function drawBO(){
+  bar('bs',['all','BUY','SELL'].map(v=>[v,NAME[v]]),F.bside,v=>F.bside=v);
+  if(!D)return;const b=(D.breakouts||[]).filter(s=>F.bside=='all'||s.plan.side==F.bside).sort((x,y)=>(x.status=='READY'?0:1)-(y.status=='READY'?0:1)||y.score-x.score);
+  document.getElementById('cnt').textContent=`${b.length} breakout setup${b.length==1?'':'s'}`;
+  document.getElementById('list').innerHTML=b.length?b.map(s=>{const p=s.plan,buy=p.side=='BUY';
+  return `<div class="c"><div class="t"><span><span class="sym">${s.symbol}</span> <span class="${buy?'buy':'sell'}">${p.side}</span><span class="tag">${s.status=='READY'?'Ready':'Triggered'}</span><span class="tag">${s.zone_tf} zone</span></span><b>${s.score}</b></div>
+  <div class="g"><div>${buy?'Break above':'Break below'}<b>${p.entry}</b></div><div>Invalid at<b>${p.sl}</b></div><div>Target 2:1<b>${p.target}</b></div><div>CMP<b>${s.cmp}</b></div></div>
+  <div class="m"><b>${s.pattern_name}</b> · ${s.pat_bars} daily bars · breakout line ${s.level}<br>Reacted from ${s.zone_tf=='1M'?'monthly':s.zone_tf=='1W'?'weekly':'daily'} ${buy?'demand':'supply'} ${s.zone[0]}–${s.zone[1]} ${s.zone_pattern} · tested ${s.zone_tests}×<br>${s.next_opp==null?'No opposing zone ahead':`Next ${buy?'supply':'demand'} ${s.next_opp} · room ${s.room_pct}% = ${s.room_r}R`}<br>Risk to invalid ${s.risk_pct}% · daily trend ${s.trend_d.toLowerCase()}</div></div>`}).join(''):'<div class="empty">No breakout setups right now.</div>'}
+function draw(){
+  bar('fv',[['board','Zone board'],['zone','7/7 entries'],['bo','Breakout (options)']],F.view,v=>F.view=v);
+  document.getElementById('zf').style.display=F.view=='zone'?'':'none';const isB=F.view=='board';document.getElementById('bf').style.display=F.view=='bo'?'':'none';document.getElementById('bd').style.display=isB?'':'none';document.getElementById('cnt').style.display=isB?'none':'';document.getElementById('list').style.display=isB?'none':'';
+  if(isB){drawBoard();return}document.getElementById('bf').style.display=F.view=='bo'?'':'none';
+  if(F.view=='bo'){drawBO();return}
+  bar('fq',QOPT,F.q,v=>F.q=v);
+  bar('fm',['all','daily','weekly','monthly','quarterly'].map(v=>[v,NAME[v]]),F.mode,v=>F.mode=v);
+  bar('fs',['all','BUY','SELL'].map(v=>[v,NAME[v]]),F.side,v=>F.side=v);
+  bar('fx',SOPT,F.show,v=>F.show=v);
+  if(!D)return;const r=pick();
+  document.getElementById('cnt').textContent=`${r.length} setup${r.length==1?'':'s'} shown of ${D.signals.length} found`;
+  document.getElementById('list').innerHTML=r.length?r.map(s=>{const p=s.plan,q=s.parts,d=dist(s).toFixed(1);
+  return `<div class="c"><div class="t"><span><span class="sym">${s.symbol}</span> <span class="${p.side=='BUY'?'buy':'sell'}">${p.side}</span><span class="tag">${NAME[s.mode]}</span><span class="tag">${NAME[s.status]}</span>${s.cf>1?`<span class="tag hot">${s.cf} timeframes</span>`:''}</span><b>${s.score}</b></div>
+  <div class="g"><div>Entry<b>${p.entry}</b></div><div>Stop<b>${p.sl}</b></div><div>Target 2:1<b>${p.target}</b></div><div>Qty<b>${s.lots?s.lots*s.lot:'—'}</b></div></div>
+  <div class="m"><b>${TF[s.mode]} chart</b> zone ${s.zone[0]}–${s.zone[1]} ${s.pattern}${s.lotl?' LOTL':''} · tested ${s.tests}× · CMP ${s.cmp} (${d}% from entry)<br>${s.t_legin?`Legin ${ft(s.t_legin)} → legout ${ft(s.t_zone)}<br>`:''}${s.htf_zone?`Inside HTF ${s.htf_zone[2]} zone ${s.htf_zone[0]}–${s.htf_zone[1]} (score ${s.htf_zone[3]})<br>`:''}${s.swing?`Legout closed beyond ${s.swing} · ${s.legout_x}× avg body<br>`:''}Stop distance ${s.risk_pct!=null?s.risk_pct+'%':'—'}<br>Fresh ${q.fresh} · Strength ${q.strength} · Base ${q.base} · EMA ${q.ema}<br>Curve ${s.loc.replace('_',' ').toLowerCase()} · trend ${s.itf_trend.toLowerCase()}${s.lots?'':' · risk too small for 1 lot'}</div></div>`}).join(''):'<div class="empty">No setups match. Loosen a filter.</div>';
+}
+fetch('history.json?'+Date.now()).then(r=>r.json()).then(h=>{H=h}).catch(()=>{}).then(()=>fetch('results.json?'+Date.now())).then(r=>r.json()).then(d=>{D=d;
+ document.getElementById('meta').innerHTML=`Updated ${d.updated} · ${d.scanned} scanned · capital ₹${d.capital.toLocaleString('en-IN')} @ ${d.risk_pct}% risk`+(d.errors.length?` · ${d.errors.length} skipped`:'')+(d.diag?'<br>'+Object.entries(d.diag).map(([m,v])=>`${m}: ${v.ltf_zones} 7/7 zones · ${v.htf_zones} HTF zones · ${v.signals} setups`).join(' | '):'');draw()})
+ .catch(()=>{document.getElementById('meta').innerHTML='No results yet. Run the GTF scan workflow once.'});
+draw();
+</script><div id="sheet"></div></body></html>
